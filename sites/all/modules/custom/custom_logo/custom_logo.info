@@ -1,0 +1,6 @@
+name = Cart Ref custom logo
+description = Displays a logo if logged in or noto logged in
+core = 7.x
+package = PayPal
+version = "7.x-1"
+core = "7.x"

@@ -1,0 +1,7 @@
+<?
+
+function iq_search() {
+	echo "Hello WOrld";
+}
+
+?>

@@ -1,0 +1,6 @@
+name = Cart Field Collections
+description = Displays fields within field collection for cart detail pages
+core = 7.x
+package = PayPal
+version = "7.x-1"
+core = "7.x"

@@ -1,0 +1,44 @@
+<?php
+
+function custom_logo() {
+	global $user;
+	global $base_url;
+	$uid = $user->uid;
+	$user = user_load($uid);
+
+	$internal = false;
+	foreach($user->roles as $role) {
+		if($role == "authenticated user") {
+			$internal = true;
+			break;
+		}
+	}
+
+	// CartRef Logo
+	if($internal) {
+		$white = "SMB";
+		$lightblue = "Hub";
+		$tagline = "3rd Party Cart Reference Site";
+	}
+
+	//Alternate Logo
+	else {
+		$white = "Cart";
+		$lightblue = "Ref";
+		$tagline = "3rd Party Cart Reference Site";
+	}
+
+	$output = "<div class='logo-text'>
+				<div class='textwrap'>
+					<a href='$base_url'>
+						<div class='darkblue'>$white</div>
+						<div class='lightblue'>$lightblue</div>
+					</a>
+				</div>
+				<!--<div class='tagline'>$tagline</div>-->
+				</div>";
+
+	echo $output;
+}
+
+?>

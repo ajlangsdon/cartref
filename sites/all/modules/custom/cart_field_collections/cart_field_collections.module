@@ -1,0 +1,561 @@
+<?php
+function display_field_collection() {
+	$nid = $nid = arg(1);
+	$node = node_load($nid);
+	$formtype = field_get_items('node', $node, 'field_integration_group');
+
+	global $user;
+	$uid = $user->uid;
+	$user = user_load($uid);
+
+	$user_roles = array();
+	$internal = false;
+	foreach($user->roles as $role) {
+		if($role == "authenticated user") {
+			$internal = true;
+			break;
+		}
+	}
+	?>
+
+	<div class="plugin-required-text">* indicates that a plugin is required for this product</div>
+	<?php
+		$additional_cart_notes = $node->field_additional_cart_notes['und'][0]['safe_value'];
+		if(!empty($additional_cart_notes)) {
+			?>
+			<div class="additional-cart-notes">
+				<span class="small-heading">Additional Cart Notes</span>
+				<?php echo $additional_cart_notes; ?>
+			</div>
+
+	<?php
+		}
+	foreach ($formtype as $itemid) {
+		$item = field_collection_field_get_entity($itemid);
+
+		$product_specific_notes = $item->field_product_specific_notes['und'][0]['value'];
+
+		// Get Product Name
+		$product_name = $item->field_paypal_products['und'][0]['tid'];
+		$product_name = taxonomy_term_load($product_name);
+		$product_name = $product_name->name;
+
+		// Get Features
+		$features = array();
+		foreach ($item->field_supported_features['und'] as $cat) {
+			foreach ($cat as $feature) {
+				$feature = tid_to_name($feature);
+				$features[] = $feature;
+			}
+		}
+
+		// Get Steps
+		$setup_steps_ids = array();
+		foreach ($item->field_setup_steps['und'] as $items) {
+			$setup_steps_ids[] = $items['value'];
+		}
+
+		$steps = array();
+		$collections = field_collection_item_load_multiple($setup_steps_ids);
+
+		$i = 1;
+		foreach ($collections as $step) {
+			$steps[$i]['description'] = $step->field_step_description['und'][0]['safe_value'];
+			$steps[$i]['long_description'] = $step->field_step_description_long_['und'][0]['value'];
+			if (isset($step->field_integration_image['und'][0]['filename'])) {
+				$steps[$i]['image'] = $step->field_integration_image['und'][0]['filename'];
+				$steps[$i]['image_uri'] = $step->field_integration_image['und'][0]['uri'];
+			}
+			$i++;
+		}
+
+		// #################################################
+		// ################# HTML OutPut ###################
+		// #################################################
+		?>
+		<div class="product-integration">
+			<fieldset class="collapsible">
+				<?php
+				/* Check to see if Plugin is required */
+				if($item->field_plugin_required_['und'][0]['value']) {
+					$plugin_required = "<span class='plugin-req-title'>*</span>";
+				}
+				else { $plugin_required = ""; }
+				?>
+
+				<legend><?php echo $product_name . $plugin_required; ?></legend>
+				<div class="content" style="display: none;">
+					<?php if($product_specific_notes): ?>
+						<h3>Product Specific Notes</h3>
+						<div class="product-specific-notes"><?php echo $product_specific_notes; ?></div>
+					<?php endif; ?>
+
+						<h3>Features</h3>
+						<div class="cart-features">
+							<ul>
+								<?php
+								foreach ($features as $feature) {
+									echo "<li>$feature</li>";
+								} ?>
+							</ul>
+						</div>
+
+					<?php if($internal && !empty($steps)): ?>
+						<h3>Steps for Integration</h3>
+						<div class="product-integration-steps">
+							<ol>
+								<?php
+								foreach ($steps as $step) {
+									$description = $step['description'];
+									$long_desc = $step['long_description'];
+
+									$bbcode = array(
+										"[strong]", "[/strong]",
+										"[b]",  "[/b]",
+										"[u]",  "[/u]",
+										"[i]",  "[/i]",
+										"[em]", "[/em]"
+									);
+									$htmlcode = array(
+										"<strong>", "</strong>",
+										"<strong>", "</strong>",
+										"<u>", "</u>",
+										"<i>", "</i>",
+										"<em>", "</em>"
+									);
+									$description =  str_replace($bbcode, $htmlcode, $description);
+									echo "<li><span class='step-desc'>" . $description . "</span>";
+									echo "<span class='long-description'>$long_desc</span>";
+
+									if (isset($step['image'])) {
+										$step_img = $step['image'];
+										$step_uri = $step['image_uri'];
+
+										$step_img_link = drupal_realpath($step_uri);
+										$step_img_link = str_replace("C:\\wamp\\www", "", $step_img_link);
+
+										//$step_img = theme('image_style', array('path' => $step_uri, 'style_name' => 'cart_step_image'));
+										//$step_img_src = image_style_url("thumbnail", $img_url);
+										$step_img = "<img src='$step_img_link' />";
+										echo "<span class='step-img'><a href='$step_img_link' rel='lightbox'/>$step_img</a></span>";
+										//echo "img is $step_img_link";
+
+										//echo "<span class='step-img'><a href='/public_html/sites/default/files/" . $step['image'] . "' rel='lightbox''><img src='/public_html/sites/default/files/" . $step['image'] . "' rel='lightbox' width='900px'/></a></span>";
+									}
+									echo "</li>";
+								}
+								?>
+							</ol>
+						</div>
+					<?php endif; ?>
+				</div>
+			</fieldset>
+		</div>
+	<?php
+	}
+
+	// Begin PayPal Credit Banners
+	$formtype = field_get_items('node', $node, 'field_paypal_credit');
+	$i = 1;
+	foreach ($formtype as $itemid) {
+		$item = field_collection_field_get_entity($itemid);
+		$plugin_name = $item->field_credit_plugin_name['und'][0]['safe_value'];
+
+		// Get Features
+		$features = array();
+		foreach ($item->field_credit_banner['und'] as $cat) {
+			$banner = $cat['value']; // Get ID for field collection
+			$collections = field_collection_field_get_entity($banner);
+		}
+
+		// Get Steps
+		$setup_steps_ids = array();
+		foreach ($item->field_credit_banner['und'] as $items) {
+			$setup_steps_ids[] = $items['value'];
+		}
+
+		$steps = array();
+		$collections = field_collection_item_load_multiple($setup_steps_ids);
+
+		// #################################################
+		// ################# HTML OutPut ###################
+		// #################################################
+		?>
+		<h2 class="pp-credit-heading">PayPal Credit Banners</h2>
+		<div class="product-integration">
+		<fieldset class="collapsible">
+			<?php
+			/* Check to see if Plugin is required */
+			if($item->field_plugin_required_['und'][0]['value']) {
+				$plugin_required = "<span class='plugin-req-title'>*</span>";
+			}
+			else { $plugin_required = ""; }
+
+			?>
+
+			<legend><?php echo $plugin_name . $plugin_required; ?></legend>
+				<div class="credit-banner-integration">
+					<div class="content" style="display: none;">
+						<?php
+							foreach($collections as $collection) {
+								$location = $collection->field_banner_location['und'][0]['value'];
+								echo "<h5>Location: $location</h5>";
+								// Get setup steps for specific location (header, footer, sidebar)
+								$setup_steps_ids = array();
+								foreach ($collection->field_setup_steps['und'] as $items) {
+									$setup_steps_ids[] = $items['value'];
+								}
+
+								$steps = array();
+								$newcollection = field_collection_item_load_multiple($setup_steps_ids);
+								echo "<ol>";
+								$i = 1;
+								foreach($newcollection as $step) {
+									$steps[$i]['description'] = $step->field_step_description['und'][0]['safe_value'];
+									$steps[$i]['long_description'] = $step->field_step_description_long_['und'][0]['value'];
+									if (isset($step->field_integration_image['und'][0]['filename'])) {
+										$steps[$i]['image'] = $step->field_integration_image['und'][0]['filename'];
+										$steps[$i]['image_uri'] = $step->field_integration_image['und'][0]['uri'];
+									}
+									$i++;
+								}
+
+								foreach ($steps as $step) {
+									$description = $step['description'];
+									$long_desc = $step['long_description'];
+
+									$bbcode = array(
+										"[strong]", "[/strong]",
+										"[b]",  "[/b]",
+										"[u]",  "[/u]",
+										"[i]",  "[/i]",
+										"[em]", "[/em]"
+									);
+									$htmlcode = array(
+										"<strong>", "</strong>",
+										"<strong>", "</strong>",
+										"<u>", "</u>",
+										"<i>", "</i>",
+										"<em>", "</em>"
+									);
+									$description =  str_replace($bbcode, $htmlcode, $description);
+									echo "<li>";
+									echo "<span class='step-desc'>" . $description . "</span>";
+									echo "<span class='long-description'>" . $long_desc . "</span>";
+
+									if (isset($step['image'])) {
+										$step_img = $step['image'];
+										$step_uri = $step['image_uri'];
+
+										$step_img_link = file_create_url($step_uri);
+										$step_img_link = parse_url($step_img_link);
+
+										$step_img_link = $step_img_link['path'];
+
+										$step_img = theme('image_style', array('path' => $step_uri, 'style_name' => 'cart_step_image'));
+										//$step_img_src = image_style_url("thumbnail", $img_url);
+										echo "<span class='step-img'><a href='$step_img_link' rel='lightbox'/>$step_img</a></span>";
+									}
+									echo "</li>";
+								}
+
+								if($location == "sidebar") {
+									//printArray($steps);
+									//exit();
+								}
+								echo "</ol>";
+								//printArray($steps);
+							}
+						?>
+					</div>
+				</div>
+		</fieldset>
+
+	<?php } ?>
+
+<?php
+	// Output display for non-logged in users
+
+}
+
+function display_field_collection_sidebar()
+{
+	$nid = $nid = arg(1);
+	$node = node_load($nid);
+	$wrapper = entity_metadata_wrapper('node', $node);
+	$formtype = field_get_items('node', $node, 'field_integration_group');
+	$output = "";
+
+	////////////////////////////////////////
+	// Plugin Required
+	////////////////////////////////////////
+	$plugin_required = array();
+	foreach ($formtype as $itemid) {
+		$item = field_collection_field_get_entity($itemid);
+		$pp_product = $item->field_paypal_products['und'][0]['tid'];
+		$pp_product = tid_to_name($pp_product);
+		if ($item->field_plugin_required_['und'][0]['value']) {
+			$temp = array();
+			$temp['plugin'] = $pp_product;
+			$temp['url'] = $item->field_plugin_url['und'][0]['safe_value'];
+			$plugin_required[] = $temp;
+		}
+	}
+
+	if ($plugin_required) {
+		$output .= "<span class='list-item'>";
+		$output .= "	<span class='sb-label'>Required Plugins</span>";
+		foreach ($plugin_required as $plugin) {
+			$plugin_name = $plugin['plugin'];
+			$plugin_url = $plugin['url'];
+			$output .= "<span class='data'><a href='" . $plugin_url . "'>$plugin_name</a></span>";
+		}
+		$output .= "</ul>";
+		$output .= "</span>";
+	}
+
+	////////////////////////////////////////
+	// Display Logo
+	////////////////////////////////////////
+	if (isset($node->field_cart_logo['und'][0]['uri'])) {
+		$logo = $node->field_cart_logo['und'][0]['uri'];
+		$logo = theme('image_style', array('path' => $logo, 'style_name' => 'cart_logo_details'));
+		$output = "<span class='cart-logo'>$logo</span>";
+	}
+
+	////////////////////////////////////////
+	// Website URL
+	////////////////////////////////////////
+	if (isset($node->field_cart_homepage['und'][0]['url'])) {
+		$homepage = $node->field_cart_homepage['und'][0]['url'];
+		$output .= "<span class='list-item'>";
+		$output .= "	<span class='sb-label'>Cart Website</span>";
+		$output .= "	<span class='data'><a href='$homepage' target='_blank'>$homepage</a></span>";
+		$output .= "</span>";
+	}
+
+	////////////////////////////////////////
+	// Contact Phone
+	////////////////////////////////////////
+	if (isset($node->field_contact_phone['und'][0]['safe_value'])) {
+		$contact_phone = $node->field_contact_phone['und'][0]['safe_value'];
+		$output .= "<span class='list-item'>";
+		$output .= "	<span class='sb-label'>Contact Phone</span>";
+		$output .= "	<span class='data'>$contact_phone</span>";
+		$output .= "</span>";
+	}
+
+	////////////////////////////////////////
+	// Their Instructions URL
+	////////////////////////////////////////
+	if (isset($node->field_their_instructions['und'][0]['url'])) {
+		$instructions = $node->field_their_instructions['und'][0]['url'];
+		$output .= "<span class='list-item'>";
+		$output .= "	<span class='sb-label'>Their Instructions</span>";
+		$output .= "	<span class='data'><a href='$instructions' target='_blank'>$instructions</a></span>";
+		$output .= "</span>";
+	}
+
+	////////////////////////////////////////
+	// Demo Information
+	////////////////////////////////////////
+	if (isset($node->field_demo_link['und'][0]['url'])) {
+		$output .= "<span class='list-item'>";
+		$output .= "	<span class='sb-label'>Demo Information</span>";
+		$output .= "	<span class='data'><span class='data-label'>Link:</span><span class='data-data'><a href='" . $node->field_demo_link['und'][0]['url'] . "' target='_blank'>" . $node->field_demo_link['und'][0]['url'] . "</a></span></span>";
+		if ($node->field_demo_username['und'][0]['safe_value']) {
+			$output .= "	<span class='data'><span class='data-label'>User:</span><span class='data-data'>" . $node->field_demo_username['und'][0]['safe_value'] . "</span></span>";
+		}
+		if ($node->field_demo_password['und'][0]['safe_value']) {
+			$output .= "	<span class='data'><span class='data-label'>Pass:</span><span class='data-data'>" . $node->field_demo_password['und'][0]['safe_value'] . "</span></span>";
+		}
+		$output .= "</span>";
+	}
+
+	////////////////////////////////////////
+	// Authentication
+	////////////////////////////////////////
+	if (isset($node->field_authentication['und'][0]['safe_value'])) {
+		$authentication = $node->field_authentication['und'][0]['safe_value'];
+		$output .= "<span class='list-item'>";
+		$output .= "	<span class='sb-label'>Authentication</span>";
+		$output .= "	<span class='data'>$authentication</span>";
+		$output .= "</span>";
+	}
+
+	////////////////////////////////////////
+	// PayPal Products
+	////////////////////////////////////////
+	$pp_products = array();
+	foreach ($formtype as $itemid) {
+		$item = field_collection_field_get_entity($itemid);
+		$pp_products[] = $item->field_paypal_products['und'][0]['tid'];
+	}
+
+	$output .= "<span class='list-item'>";
+	$output .= "	<span class='sb-label'>PayPal Products</span>";
+	$i = 1;
+	foreach ($pp_products as $product) {
+		$product = tid_to_name($product);
+		$output .= "<span class='data'>$product</span>";
+	}
+	$output .= "</span>";
+
+	////////////////////////////////////////
+	// Supported Features
+	////////////////////////////////////////
+	$features = array();
+	foreach ($formtype as $itemid) {
+		$item = field_collection_field_get_entity($itemid);
+		// Get Features
+		foreach ($item->field_supported_features['und'] as $cat) {
+			foreach ($cat as $feature) {
+				//$feature = tid_to_name($feature);
+				$features[] = $feature;
+			}
+		}
+	}
+
+	$features = array_unique($features);
+
+	$output .= "<span class='list-item'>";
+	$output .= "	<span class='sb-label'>Supported Features</span>";
+	$pp_features = array();
+	foreach ($features as $feature) {
+		$pp_features[] = tid_to_name($feature);
+	}
+	foreach ($pp_features as $feature) {
+		$output .= "	<span class='data'>$feature</span>";
+	}
+	$output .= "</span>";
+
+	////////////////////////////////////////
+	// Maintainer of Cart & Documentation
+	////////////////////////////////////////
+	if (isset($node->field_cart_maintainer['und'][0]['uid'])) {
+		$cart_maintainer_uid = $node->field_cart_maintainer['und'][0]['uid'];
+		$cart_maintainer = user_load($cart_maintainer_uid);
+		$cart_maintainer = $cart_maintainer->field_full_name['und'][0]['safe_value'];
+		$output .= "<span class='list-item'>";
+		$output .= "	<span class='sb-label'>Maintainer of Cart</span>";
+		$output .= "	<span class='data'>$cart_maintainer</span>";
+		$output .= "</span>";
+	}
+	if(isset($node->field_documentation_for_cart['und'])) {
+		$output .= "<span class='list-item file-attachments'>";
+		$output .= "	<span class='sb-label'>Cart Documentation</span>";
+		$output .= "	<span class='data'>";
+		$document_path = $node->field_documentation_for_cart['und'];
+		foreach ($document_path as $doc) {
+			$doc_uri = $doc['uri'];
+			$doc_desc = $doc['description'];
+			$doc_url = uriToUrl($doc_uri);
+			$output .= "	<a href='/$doc_url' target='_blank' class='attachment-link'>$doc_desc</a>";
+		}
+		$output .= "	</span>";
+		$output .= "</span>";
+	}
+
+	// Print Output
+	echo $output;
+}
+
+function list_cart_ppc_second_button() {
+	$content_type = "shopping_cart";
+	$nodes = node_load_multiple(array(), array('type' => $content_type));
+
+	$credit_nid_list = array();
+	$x = 0;
+
+	foreach($nodes as $node) {
+		$title = $node->title;
+		$nid = $node->nid;
+
+		////////////////////////////////////////
+		// Supported Features
+		////////////////////////////////////////
+		$node = node_load($nid);
+		$wrapper = entity_metadata_wrapper('node', $node);
+		$formtype = field_get_items('node', $node, 'field_integration_group');
+
+		$features = array();
+		foreach ($formtype as $itemid) {
+			$item = field_collection_field_get_entity($itemid);
+			// Get Features
+			foreach ($item->field_supported_features['und'] as $cat) {
+				foreach ($cat as $feature) {
+					$feature = tid_to_name($feature);
+					if($feature == "PayPal Credit 2nd Button") {
+						$credit_nid_list[$node->title]['nid'] = $nid;
+						$credit_nid_list[$node->title]['title'] = $node->title;
+						$x++;
+					}
+				}
+			}
+		}
+	}
+	global $base_url;
+	ksort($credit_nid_list);
+	$output = "<ul>";
+	$item_thread = array_unique($credit_nid_list, SORT_REGULAR);
+	foreach($credit_nid_list as $cart) {
+		$nid = $cart['nid'];
+		$title = $cart['title'];
+		$output .= "<li><a href='$base_url/node/$nid'>$title</a></li>";
+	}
+	$output .= "</ul>";
+	echo $output;
+}
+
+function tam_cart_list() {
+	$content_type = "shopping_cart";
+	$nodes = node_load_multiple(array(), array('type' => $content_type));
+
+	$tam_id_list = array();
+
+	foreach($nodes as $node) {
+		$title = $node->title;
+		$nid = $node->nid;
+
+		////////////////////////////////////////
+		// Supported Features
+		////////////////////////////////////////
+		$node = node_load($nid);
+		$tam_uid = $node->field_tam_for_cart['und'][0]['uid'];
+
+		//printArray($node);
+
+		if(!empty($tam_uid)) {
+			$user = user_load($tam_uid);
+			$user_full_name = $user->field_full_name['und'][0]['value'];
+			$tam_id_list[$user_full_name][] = $node->title;
+		}
+	}
+	//printArray($tam_id_list);
+	$output = "<div class='tam-data'>";
+	foreach($tam_id_list as $name => $options) {
+		$output .= "<div class=tam-item><div class='tam-name'>" . $name . "</div><div class='tam-carts'>" . implode('<br>', $options) . "</div></div>";
+	}
+	$output.= "</div>";
+	echo $output;
+}
+
+function tid_to_name($tid) {
+	$name = taxonomy_term_load($tid);
+	$name = $name->name;
+	return $name;
+}
+
+function printArray($var) {
+	echo "<pre>";
+	print_r($var);
+	echo "</pre>";
+//	/exit();
+}
+
+function uriToUrl($uri) {
+	global $base_url;
+	$url = file_create_url($uri);
+	$url = str_replace($base_url .'/', '', $url);
+	return $url;
+}
