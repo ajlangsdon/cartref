@@ -392,14 +392,14 @@ function display_field_collection_sidebar()
 		$pp_products[] = $item->field_paypal_products['und'][0]['tid'];
 	}
 
-	$output .= "<span class='list-item'>";
-	$output .= "	<span class='sb-label'>PayPal Products</span>";
+	//$output .= "<span class='list-item'>";
+	//$output .= "	<span class='sb-label'>PayPal Products</span>";
 	$i = 1;
 	foreach ($pp_products as $product) {
 		$product = tid_to_name($product);
-		$output .= "<span class='data'>$product</span>";
+		//$output .= "<span class='data'>$product</span>";
 	}
-	$output .= "</span>";
+	//$output .= "</span>";
 
 	////////////////////////////////////////
 	// Supported Features
@@ -418,14 +418,53 @@ function display_field_collection_sidebar()
 
 	$features = array_unique($features);
 
-	$output .= "<span class='list-item'>";
-	$output .= "	<span class='sb-label'>Supported Features</span>";
+	//$output .= "<span class='list-item'>";
+	//$output .= "	<span class='sb-label'>Supported Features</span>";
 	$pp_features = array();
 	foreach ($features as $feature) {
 		$pp_features[] = tid_to_name($feature);
 	}
 	foreach ($pp_features as $feature) {
-		$output .= "	<span class='data'>$feature</span>";
+		//$output .= "	<span class='data'>$feature</span>";
+	}
+	//$output .= "</span>";
+
+	////////////////////////////////////////
+	// New code for supported features
+	////////////////////////////////////////
+
+	// Get product Name
+	$pp_products = array();
+	$features = array();
+	$products_and_features = array();
+	$z = 0;
+	foreach ($formtype as $itemid) {
+		//echo "<h1>Item ID: " . printArray($itemid) . "</h1>";
+		$item = field_collection_field_get_entity($itemid);
+		//printArray($item);
+		$pp_products[$z] = $item->field_paypal_products['und'][0]['tid'];
+		$product_name = tid_to_name($item->field_paypal_products['und'][0]['tid']);
+		$z++;
+		foreach ($item->field_supported_features['und'] as $cat) {
+			$features = array();
+			foreach ($cat as $feature) {
+				$feature = tid_to_name($feature);
+				$products_and_features[$product_name][] = $feature;
+			}
+		}
+	}
+
+	$output .= "<span class='list-item'>";
+	$output.= "<span class='sb-label'>Products & Features</span>";
+	foreach($products_and_features as $prod_name => $prod_features) {
+		$output.= "<span class='data'>";
+		$output.= "<span class='product-name'>" . $prod_name . "</span>";
+		$output.= "<ul class='prod-and-features'>";
+		foreach($prod_features as $feat) {
+			$output.= "<li>" . $feat . "</li>";
+		}
+		$output.= "</ul>";
+		$output.= "</span>";
 	}
 	$output .= "</span>";
 
