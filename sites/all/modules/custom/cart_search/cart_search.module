@@ -17,12 +17,8 @@ function cart_search() {
     $output .= "</form>";
     $output .= "</div>";
 
-    echo $output;
-
+    $output.= "<div class='cart-search-content'>";
     if(!empty($_POST)) {
-        echo "<div class='cart-search-content'>";
-        //printVars($_POST);
-
         // Get shopping carts
         $args = array(':type' => 'shopping_cart');
         $cart_list = db_query("SELECT nid, title FROM node WHERE type = 'shopping_cart'")->fetchAll();
@@ -30,7 +26,7 @@ function cart_search() {
         // Get products & features for each cart
         $cartdata = get_cart_products($cart_list, $_POST);
 
-        $output = "";
+        //$output = "";
         $output.= "<h3>Search Parameters</h3>";
         $output.= "<div id='cart-search-params'>";
         $output.= "  <div class='products search-section'>";
@@ -63,9 +59,14 @@ function cart_search() {
             $output.= "<li><a href='/" . $ct['alias'] . "'>" . $ct['title'] . "</a></li>";
         }
         $output.= "</ul>";
-        $output.= "</div>";
-        echo $output;
+
     }
+    else {
+        $output.= "Please use the search parameters to the left to search for a shopping cart.<br><br>";
+        $output.= "When selecting multiple products, the features will apply to all products selected. For example, if you select <b>Express Checkout</b> and <b>PayFlow Pro</b> with <b>Sale</b> as a feature, only carts that have both <b>Express Checkout</b> and <b>PayFlow Pro</b> and both products would have the <b>Sale</b> feature.";
+    }
+    $output.= "</div>";
+    echo $output;
 }
 
 function get_cart_products($cart_list, $inputdata) {
