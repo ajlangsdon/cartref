@@ -55,8 +55,9 @@ function cart_search() {
 
         $output.= "<h3>Results Matching Search Criteria</h3>";
         $output.= "<ul>";
+        global $base_url;
         foreach($cartdata as $ct) {
-            $output.= "<li><a href='/" . $ct['alias'] . "'>" . $ct['title'] . "</a></li>";
+            $output.= "<li><a href='$base_url/" . $ct['alias'] . "'>" . $ct['title'] . "</a></li>";
         }
         $output.= "</ul>";
 
