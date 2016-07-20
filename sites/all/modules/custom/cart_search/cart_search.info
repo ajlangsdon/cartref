@@ -1,0 +1,6 @@
+name = Custom Cart Search for Cartref
+description = Allows you to apply filters and search for carts with specific products or features
+core = 7.x
+package = PayPal
+version = "7.x-1"
+core = "7.x"

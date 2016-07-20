@@ -1,0 +1,228 @@
+<?php
+
+function cart_search() {
+    $params = get_cart_search_params();
+
+    $output = "<div class='cart-search-sidebar'>";
+    $output .= "<form action='' method='post'>";
+    $output .= "<h3>Select Products</h3>";
+    $output .= "<ul>";
+    $output .= $params['products'];
+    $output .= "</ul>";
+    $output .= "<h3>Select Features</h3>";
+    $output .= "<ul>";
+    $output .= $params['features'];
+    $output .= "</ul>";
+    $output .= "<input type='submit' value='Submit'>";
+    $output .= "</form>";
+    $output .= "</div>";
+
+    echo $output;
+
+    if(!empty($_POST)) {
+        echo "<div class='cart-search-content'>";
+        //printVars($_POST);
+
+        // Get shopping carts
+        $args = array(':type' => 'shopping_cart');
+        $cart_list = db_query("SELECT nid, title FROM node WHERE type = 'shopping_cart'")->fetchAll();
+
+        // Get products & features for each cart
+        $cartdata = get_cart_products($cart_list, $_POST);
+
+        $output = "";
+        $output.= "<h3>Search Parameters</h3>";
+        $output.= "<div id='cart-search-params'>";
+        $output.= "  <div class='products search-section'>";
+        $output.= "    <span class='search-section-title'>Products:</span> ";
+        $outcount = 0;
+        foreach($_POST['product_options'] as $pr) {
+            $output.= tid_to_name($pr);
+            $outcount++;
+            if($outcount != count($_POST['product_options'])) {
+                $output.= ", ";
+            }
+        }
+        $output.= "  </div>";
+        $output.= "  <div class='features search-section'>";
+        $output.= "    <span class='search-section-title'>Features:</span> ";
+        $outcount = 0;
+        foreach($_POST['feature_options'] as $pr) {
+            $output.= tid_to_name($pr);
+            $outcount++;
+            if($outcount != count($_POST['feature_options'])) {
+                $output.= ", ";
+            }
+        }
+        $output.= "  </div>";
+        $output.= "</div>";
+
+        $output.= "<h3>Results Matching Search Criteria</h3>";
+        $output.= "<ul>";
+        foreach($cartdata as $ct) {
+            $output.= "<li><a href='/" . $ct['alias'] . "'>" . $ct['title'] . "</a></li>";
+        }
+        $output.= "</ul>";
+        $output.= "</div>";
+        echo $output;
+    }
+}
+
+function get_cart_products($cart_list, $inputdata) {
+    $searched_products = array(); // Array containing TIDs for searched products
+    $searched_features = array(); // Array containing TIDs for features per product
+    foreach($inputdata['product_options'] as $prodoption) {
+        $searched_products[] = $prodoption;
+    }
+    foreach($inputdata['feature_options'] as $featoption) {
+        $searched_features[] = $featoption;
+    }
+
+    $product_list = "";
+    $prodtest = array();
+    foreach($cart_list as $cart) {
+        // Get details for each shopping cart
+        $nid = $cart->nid;
+        $node = node_load($nid);
+        $wrapper = entity_metadata_wrapper('node', $node);
+        $formtype = field_get_items('node', $node, 'field_integration_group');
+
+        // Get products for shopping cart
+        $pp_products = array();
+        foreach($formtype as $itemid) {
+            $item = field_collection_field_get_entity($itemid);
+            $pp_products[] = $item->field_paypal_products['und'][0]['tid'];
+        }
+        //echo "<h3>Searched</h3>";
+        //printVars($searched_products);
+
+        // Check current cart products against searched products
+        $tempprods = array();
+        foreach($searched_products as $sp) {
+            if(in_array($sp, $pp_products)) {
+                $tempprods[] = 1;
+            }
+            else { $tempprods[] = 0; }
+        }
+
+        // If shopping cart has all searched products, store in array
+        if(!in_array(0, $tempprods)) {
+            $has_products[] = $nid;
+        }
+    }
+
+    // Check features for carts with matching products
+    foreach($has_products as $hp_nid) {
+        $nid = $hp_nid;
+        $node = node_load($nid);
+        $wrapper = entity_metadata_wrapper('node', $node);
+        $formtype = field_get_items('node', $node, 'field_integration_group');
+
+        $features = array();
+        foreach($formtype as $itemid) {
+            $item = field_collection_field_get_entity($itemid);
+            // Get Features
+            foreach ($item->field_supported_features['und'] as $cat) {
+                foreach ($cat as $feature) {
+                    //$feature = tid_to_name($feature);
+                    $features[] = $feature;
+                }
+            }
+        }
+        $tempfeats = array();
+        foreach($searched_features as $sf) {
+            if(in_array($sf, $features)) {
+                $tempfeats[] = 1;
+            }
+            else { $tempfeats[] = 0; }
+        }
+
+        // If shopping cart has all searched products, store in array
+        if(!in_array(0, $tempfeats)) {
+            $has_features[] = $nid;
+        }
+    }
+
+    // Display carts that have matching products & features to search criteria
+    $nodes = node_load_multiple($has_features);
+    $node_data = array();
+    $z = 0;
+    foreach($nodes as $single) {
+        $node_data[$z]['title'] = $single->title;
+        $node_data[$z]['nid'] = $single->nid;
+        $node_data[$z]['alias'] = drupal_get_path_alias('node/' . $single->nid);
+
+        //printVars($single);
+        $z++;
+    }
+
+    return $node_data;
+}
+
+function get_cart_search_params() {
+    // Get product names
+    $vocabulary = taxonomy_vocabulary_machine_name_load('paypal_products');
+    $terms = entity_load('taxonomy_term', FALSE, array('vid' => $vocabulary->vid));
+
+    $product_names = array();
+    $x = 0;
+    foreach($terms as $term) {
+        $product_names[$x]['name'] = $term->name;
+        $product_names[$x]['tid'] = $term->tid;
+        $x++;
+    }
+
+    // Get feature list
+    $vocabulary = taxonomy_vocabulary_machine_name_load('supported_features');
+    $terms = entity_load('taxonomy_term', FALSE, array('vid' => $vocabulary->vid));
+
+    $feature_list = array();
+    $x = 0;
+    foreach($terms as $term) {
+        $feature_list[$x]['name'] = $term->name;
+        $feature_list[$x]['tid'] = $term->tid;
+        $x++;
+    }
+
+    // Create checkboxes for options
+    $product_options = "";
+    foreach($product_names as $product) {
+        $product_name = $product['name'];
+        $product_tid = $product['tid'];
+        if(isset($_POST)) {
+            $checkthisbox = '';
+            foreach($_POST['product_options'] as $prod_id) {
+                if($prod_id == $product_tid) {
+                    $checkthisbox = 'checked=checked';
+                }
+            }
+        }
+        $product_options.= "<li><span class='ckbox'><input type='checkbox' name='product_options[]' value='$product_tid' $checkthisbox></span><span class='ckboxname'>$product_name</span></li>";
+    }
+
+    $feature_options = "";
+    foreach($feature_list as $feature) {
+        $product_name = $feature['name'];
+        $product_tid = $feature['tid'];
+        if(isset($_POST)) {
+            $checkthisbox = '';
+            foreach($_POST['feature_options'] as $feature_id) {
+                if($feature_id == $product_tid) {
+                    $checkthisbox = 'checked=checked';
+                }
+            }
+        }
+        $feature_options.= "<li><span class='ckbox'><input type='checkbox' name='feature_options[]' value='$product_tid' $checkthisbox></span><span class='ckboxname'>$product_name</span>";
+    }
+
+    $search_criteria['products'] = $product_options;
+    $search_criteria['features'] = $feature_options;
+
+    return $search_criteria;
+}
+
+function printVars($array) {
+    echo "<pre>";
+    print_r($array);
+    echo "</pre>";
+}
