@@ -10,7 +10,7 @@ function cart_search() {
     $output .= $params['products'];
     $output .= "</ul>";
     $output .= "<h3>Select Features</h3>";
-    $output .= "<ul>";
+    $output .= "<ul id='feature-select'>";
     $output .= $params['features'];
     $output .= "</ul>";
     $output .= "<input type='submit' value='Submit'>";
