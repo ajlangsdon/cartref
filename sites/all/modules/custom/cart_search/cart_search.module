@@ -3,6 +3,10 @@
 function cart_search() {
     $params = get_cart_search_params();
 
+    // Print announcement block
+    $block = block_load('block',6);
+    $announcement_block = drupal_render(_block_get_renderable_array(_block_render_blocks(array($block))));
+
     $output = "<div class='cart-search-sidebar'>";
     $output .= "<form action='' method='post'>";
     $output .= "<h3>Select Products</h3>";
@@ -18,6 +22,7 @@ function cart_search() {
     $output .= "</div>";
 
     $output.= "<div class='cart-search-content'>";
+    $output.= $announcement_block;
     if(!empty($_POST)) {
         // Get shopping carts
         $args = array(':type' => 'shopping_cart');
@@ -63,9 +68,13 @@ function cart_search() {
 
     }
     else {
-        $output.= "Please use the search parameters to the left to search for a shopping cart.<br><br>";
+        drupal_set_message('If you are experiencing template/layout issues, try <b>refreshing your browswer</b> to load the latest stylesheet instead of using a cached version.');
+        $output.= "<div class='cart-search-instructions'>";
+        $output.= "<h3>Search Instructions</h3>";
+        $output.= "<p>Please use the search parameters to the left to search for a shopping cart.</p>";
         $output.= "When selecting multiple products, the features will apply to all products selected. For example, if you select <b>Express Checkout</b> and <b>PayFlow Pro</b> with <b>Sale</b> as a feature, only carts that have both <b>Express Checkout</b> and <b>PayFlow Pro</b> and both products would have the <b>Sale</b> feature.";
     }
+    $output.= "</div>";
     $output.= "</div>";
     echo $output;
 }
