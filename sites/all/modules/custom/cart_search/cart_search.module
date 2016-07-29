@@ -26,7 +26,7 @@ function cart_search() {
     if(!empty($_POST)) {
         // Get shopping carts
         $args = array(':type' => 'shopping_cart');
-        $cart_list = db_query("SELECT nid, title FROM node WHERE type = 'shopping_cart'")->fetchAll();
+        $cart_list = db_query("SELECT nid, title FROM node WHERE type = 'shopping_cart' ORDER BY title")->fetchAll();
 
         // Get products & features for each cart
         $cartdata = get_cart_products($cart_list, $_POST);
@@ -34,28 +34,32 @@ function cart_search() {
         //$output = "";
         $output.= "<h3>Search Parameters</h3>";
         $output.= "<div id='cart-search-params'>";
-        $output.= "  <div class='products search-section'>";
-        $output.= "    <span class='search-section-title'>Products:</span> ";
-        $outcount = 0;
-        foreach($_POST['product_options'] as $pr) {
-            $output.= tid_to_name($pr);
-            $outcount++;
-            if($outcount != count($_POST['product_options'])) {
-                $output.= ", ";
+        if(!empty($_POST['product_options'])) {
+            $output .= "  <div class='products search-section'>";
+            $output .= "    <span class='search-section-title'>Products:</span> ";
+            $outcount = 0;
+            foreach ($_POST['product_options'] as $pr) {
+                $output .= tid_to_name($pr);
+                $outcount++;
+                if ($outcount != count($_POST['product_options'])) {
+                    $output .= ", ";
+                }
             }
+            $output .= "  </div>";
         }
-        $output.= "  </div>";
-        $output.= "  <div class='features search-section'>";
-        $output.= "    <span class='search-section-title'>Features:</span> ";
-        $outcount = 0;
-        foreach($_POST['feature_options'] as $pr) {
-            $output.= tid_to_name($pr);
-            $outcount++;
-            if($outcount != count($_POST['feature_options'])) {
-                $output.= ", ";
+        if(!empty($_POST['feature_options'])) {
+            $output .= "  <div class='features search-section'>";
+            $output .= "    <span class='search-section-title'>Features:</span> ";
+            $outcount = 0;
+            foreach ($_POST['feature_options'] as $pr) {
+                $output .= tid_to_name($pr);
+                $outcount++;
+                if ($outcount != count($_POST['feature_options'])) {
+                    $output .= ", ";
+                }
             }
+            $output .= "  </div>";
         }
-        $output.= "  </div>";
         $output.= "</div>";
 
         $output.= "<h3>Results Matching Search Criteria</h3>";
