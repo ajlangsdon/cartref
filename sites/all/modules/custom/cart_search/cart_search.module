@@ -269,6 +269,34 @@ function cart_search_log_params($inputdata) {
         ->execute();
 }
 
+function display_cart_searches() {
+    // Get data from cart_search table
+    $result = db_query('SELECT * FROM {cart_search}');
+
+    $output = "";
+    $output.= "<table class='cart-search-table'>";
+    $output.= " <thead>";
+    $output.= "     <tr>";
+    $output.= "         <th class='search-date'>Date</th><th class='data'>Products</th><th class='data'>Features</th>";
+    $output.= "     </tr>";
+    $output.= " </thead>";
+    $output.= " <tbody>";
+
+    // Output searched data
+    foreach ($result as $record) {
+        $time = $record->Timestamp;
+        $time = date('M j, Y', $time);
+        $products = $record->Products;
+        $features = $record->Features;
+        $output.= "<tr>";
+        $output.= " <td>$time</td><td>$products</td><td>$features</td>";
+        $output.= "</tr>";
+    }
+    $output.= " </tbody>";
+    $output.= "</table>";
+    echo $output;
+}
+
 function printVars($array) {
     echo "<pre>";
     print_r($array);
