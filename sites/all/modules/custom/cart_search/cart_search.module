@@ -24,6 +24,8 @@ function cart_search() {
     $output.= "<div class='cart-search-content'>";
     $output.= $announcement_block;
     if(!empty($_POST)) {
+        // Log search parameters
+        cart_search_log_params($_POST);
         // Get shopping carts
         $args = array(':type' => 'shopping_cart');
         $cart_list = db_query("SELECT nid, title FROM node WHERE type = 'shopping_cart' ORDER BY title")->fetchAll();
@@ -239,6 +241,32 @@ function get_cart_search_params() {
     $search_criteria['features'] = $feature_options;
 
     return $search_criteria;
+}
+
+function cart_search_log_params($inputdata) {
+    global $base_url;
+    $search_params_file = file_get_contents("cart_searches.txt");
+    $products = $features = "";
+    $prod_count = count($inputdata['product_options']);
+    $feat_count = count($inputdata['feature_options']);
+    $x = 1;
+    foreach($inputdata['product_options'] as $prod_option) {
+        $products .= tid_to_name($prod_option);
+        if($x < $prod_count) {
+            $products .= ", ";
+        }
+        $x++;
+    }
+    foreach($inputdata['feature_options'] as $feat_option) {
+        $features .= tid_to_name($feat_option);
+    }
+    $cartsearchid = db_insert('cart_search') // Table name no longer needs {}
+    ->fields(array(
+        'Products' => $products,
+        'Features' => $features,
+        'Timestamp' => REQUEST_TIME,
+    ))
+        ->execute();
 }
 
 function printVars($array) {
