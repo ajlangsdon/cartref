@@ -272,7 +272,7 @@ function cart_search_log_params($inputdata) {
 function display_cart_searches() {
     if(user_is_logged_in()) {
         // Get data from cart_search table
-        $result = db_query('SELECT * FROM {cart_search}');
+        $result = db_query('SELECT * FROM {cart_search} ORDER BY Timestamp DESC');
 
         $output = "";
         $output .= "<table class='cart-search-table'>";
