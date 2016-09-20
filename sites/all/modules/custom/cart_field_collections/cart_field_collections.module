@@ -271,11 +271,109 @@ function display_field_collection() {
 				</div>
 		</fieldset>
 
-	<?php } ?>
-
-<?php
+	<?php }
+	
 	// Output display for non-logged in users
-
+	$nid = $nid = arg(1);
+	$node = node_load($nid);
+	$formtype = field_get_items('node', $node, 'field_public_steps');
+	
+	
+	foreach ($formtype as $itemid) {
+		$item = field_collection_field_get_entity($itemid);
+		$product_specific_notes = $item->field_product_specific_notes['und'][0]['value'];
+		
+		// Get Product Name
+		$product_name = $item->field_public_product_name['und'][0]['safe_value'];
+		
+		// Get Steps
+		$setup_steps_ids = array();
+		foreach ($item->field_setup_steps['und'] as $items) {
+			$setup_steps_ids[] = $items['value'];
+		}
+		
+		$steps = array();
+		$collections = field_collection_item_load_multiple($setup_steps_ids);
+		
+		$i = 1;
+		foreach ($collections as $step) {
+			//printArray($step);
+			$steps[$i]['description'] = $step->field_step_description['und'][0]['safe_value'];
+			$steps[$i]['long_description'] = $step->field_step_description_long_['und'][0]['value'];
+			if (isset($step->field_integration_image['und'][0]['filename'])) {
+				$steps[$i]['image'] = $step->field_integration_image['und'][0]['filename'];
+				$steps[$i]['image_uri'] = $step->field_integration_image['und'][0]['uri'];
+			}
+			$i++;
+		}
+		
+		// #################################################
+		// ################# HTML OutPut ###################
+		// #################################################
+		?>
+		<div class="product-integration">
+		<fieldset class="collapsible">
+			<legend><?php echo $product_name; ?></legend>
+			<div class="content" style="display: none;">
+				<?php if($product_specific_notes): ?>
+					<h3>Product Specific Notes</h3>
+					<div class="product-specific-notes"><?php echo $product_specific_notes; ?></div>
+				<?php endif; ?>
+				
+				<?php if(!empty($steps)): ?>
+					<h3>Steps for Integration</h3>
+					<div class="product-integration-steps">
+						<ol>
+							<?php
+							//printArray($steps);
+							foreach ($steps as $step) {
+								$description = $step['description'];
+								$long_desc = $step['long_description'];
+								
+								$bbcode = array(
+									"[strong]", "[/strong]",
+									"[b]",  "[/b]",
+									"[u]",  "[/u]",
+									"[i]",  "[/i]",
+									"[em]", "[/em]"
+								);
+								$htmlcode = array(
+									"<strong>", "</strong>",
+									"<strong>", "</strong>",
+									"<u>", "</u>",
+									"<i>", "</i>",
+									"<em>", "</em>"
+								);
+								$description =  str_replace($bbcode, $htmlcode, $description);
+								echo "<li><span class='step-desc'>" . $description . "</span>";
+								echo "<span class='long-description'>$long_desc</span>";
+								
+								if (isset($step['image'])) {
+									$step_img = $step['image'];
+									$step_uri = $step['image_uri'];
+									
+									$step_img_link = drupal_realpath($step_uri);
+									$step_img_link = str_replace("C:\\wamp\\www", "", $step_img_link);
+									
+									//$step_img = theme('image_style', array('path' => $step_uri, 'style_name' => 'cart_step_image'));
+									//$step_img_src = image_style_url("thumbnail", $img_url);
+									$step_img = "<img src='$step_img_link' />";
+									echo "<span class='step-img'><a href='$step_img_link' rel='lightbox'/>$step_img</a></span>";
+									//echo "img is $step_img_link";
+									
+									//echo "<span class='step-img'><a href='/public_html/sites/default/files/" . $step['image'] . "' rel='lightbox''><img src='/public_html/sites/default/files/" . $step['image'] . "' rel='lightbox' width='900px'/></a></span>";
+								}
+								echo "</li>";
+							}
+							?>
+						</ol>
+					</div>
+				<?php endif; ?>
+			</div>
+		</fieldset>
+	</div>
+	<?php
+	}
 }
 
 function display_field_collection_sidebar()
