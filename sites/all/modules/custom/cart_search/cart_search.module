@@ -244,8 +244,6 @@ function get_cart_search_params() {
 }
 
 function cart_search_log_params($inputdata) {
-    global $base_url;
-    $search_params_file = file_get_contents("cart_searches.txt");
     $products = $features = "";
     $prod_count = count($inputdata['product_options']);
     $feat_count = count($inputdata['feature_options']);
@@ -257,22 +255,24 @@ function cart_search_log_params($inputdata) {
         }
         $x++;
     }
+    $x = 1;
     foreach($inputdata['feature_options'] as $feat_option) {
         $features .= tid_to_name($feat_option);
+        if($x < $feat_count) {
+            $features .= ", ";
+        }
+        $x++;
     }
-    $cartsearchid = db_insert('cart_search') // Table name no longer needs {}
-    ->fields(array(
-        'Products' => $products,
-        'Features' => $features,
-        'Timestamp' => REQUEST_TIME,
-    ))
-        ->execute();
+    if(!empty($features) || !empty($products)) {
+        $cartsearchid = db_insert('cart_search')// Table name no longer needs {}
+        ->fields(array('Products' => $products, 'Features' => $features, 'Timestamp' => REQUEST_TIME,))->execute();
+    }
 }
 
 function display_cart_searches() {
     if(user_is_logged_in()) {
         // Get data from cart_search table
-        $result = db_query('SELECT * FROM {cart_search}');
+        $result = db_query('SELECT * FROM {cart_search} ORDER BY Timestamp DESC');
 
         $output = "";
         $output .= "<table class='cart-search-table'>";
@@ -283,6 +283,10 @@ function display_cart_searches() {
         $output .= " </thead>";
         $output .= " <tbody>";
 
+        $data = array();
+        $product_list = array();
+        $feature_list = array();
+
         // Output searched data
         foreach ($result as $record) {
             $time = $record->Timestamp;
@@ -292,9 +296,42 @@ function display_cart_searches() {
             $output .= "<tr>";
             $output .= " <td>$time</td><td>$products</td><td>$features</td>";
             $output .= "</tr>";
+
+            // Store values to show most used
+            $these_products = explode(', ', $products);
+            $these_features = explode(', ', $features);
+            foreach($these_products as $this_prod) {
+                array_push($product_list, $this_prod);
+            }
+            foreach($these_features as $this_feat) {
+                array_push($feature_list, $this_feat);
+            }
         }
         $output .= " </tbody>";
         $output .= "</table>";
+
+        // Process stored data for analytics
+        $product_list = array_filter_sort_data($product_list);
+        $feature_list = array_filter_sort_data($feature_list);
+
+        // Statistics section
+        $output.= "<div class='top-searched-data'>";
+        $output.= "<h3>Most searched products</h3>";
+        $output.= "<ul>";
+        foreach($product_list as $key => $val) {
+            $output.= "<li>" . $key . "</li>";;
+        }
+        $output.= "</ul>";
+        $output.= "</div>";
+
+        $output.= "<div class='top-searched-data'>";
+        $output.= "<h3>Most searched Features</h3>";
+        $output.= "<ul>";
+        foreach($feature_list as $key => $val) {
+            $output.= "<li>" . $key . "</li>";;
+        }
+        $output.= "</ul>";
+        $output.= "</div>";
     }
     else {
         $output = "You are not authorized to view this page.";
@@ -306,4 +343,10 @@ function printVars($array) {
     echo "<pre>";
     print_r($array);
     echo "</pre>";
+}
+
+function array_filter_sort_data($array) {
+    $data = array_count_values(array_filter($array));
+    arsort($data);
+    return $data;
 }
