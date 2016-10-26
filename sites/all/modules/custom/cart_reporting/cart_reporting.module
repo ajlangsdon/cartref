@@ -1,0 +1,59 @@
+<?php
+
+function andrew_report() {
+    // Get carts and store ids for cart products
+    $cart_list = db_query("SELECT nid, title FROM node WHERE type = 'shopping_cart' ORDER BY title")->fetchAll();
+    
+    // Load all terms from vocabulary
+    $vocabulary = taxonomy_vocabulary_machine_name_load('paypal_products');
+    $terms = entity_load('taxonomy_term', FALSE, array('vid' => $vocabulary->vid));
+    
+    // Store term names for all terms
+    $vocab_names = array();
+    foreach($terms as $term) {
+        $tid = $term->tid;
+        $term_data = taxonomy_term_load($tid);
+        $vocab_names[] = $term_data->name;
+    }
+    asort($vocab_names);
+    
+    // Store names for column headers
+    $vocab_names_out = implode(",", $vocab_names);
+    echo $vocab_names_out;
+    
+    foreach($cart_list as $cart) {
+        $nid = $cart->nid;
+        $node = node_load($nid);
+    
+        $formtype = field_get_items('node', $node, 'field_integration_group');
+    
+        // Get products for the cart
+        $pp_products = array();
+        foreach($formtype as $itemid) {
+            $item = field_collection_field_get_entity($itemid);
+            //$pp_products[] = $item->field_paypal_products['und'][0]['tid'];
+            $product = taxonomy_term_load($item->field_paypal_products['und'][0]['tid']);
+            $product_name = $product->name;
+            $pp_products[] = $product_name;
+        }
+        //printArray($pp_products);
+        
+        $cart_data = array();
+        // Loop through each product to generate y/n output for this cart
+        foreach($vocab_names as $product) {
+            if(in_array($product, $pp_products)) {
+                $val = "Y";
+            }
+            else {
+                $val = "N";
+            }
+            $val.= ",";
+            $cart_data[] = $val;
+        }
+    }
+    
+    $output = $vocab_names_out;
+    printArray($cart_data);
+    
+    return $output;
+}

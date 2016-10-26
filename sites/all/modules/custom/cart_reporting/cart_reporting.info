@@ -1,0 +1,6 @@
+name = Custom Cart Reporting
+description =
+core = 7.x
+package = PayPal
+version = "7.x-1"
+core = "7.x"
