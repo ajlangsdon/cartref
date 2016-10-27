@@ -1,6 +1,18 @@
 <?php
 
-function andrew_report() {
+function cart_reporting_buttons() {
+    $output = "<form action='' method='POST'>";
+    $output.= " <button name='products_by_cart_report'>Products by Cart Report</button>";
+    $output.= "</form>";
+    
+    echo $output;
+    
+    if(isset($_POST['products_by_cart_report'])) {
+        products_by_cart_report();
+    }
+}
+
+function products_by_cart_report() {
     // Get carts and store ids for cart products
     $cart_list = db_query("SELECT nid, title FROM node WHERE type = 'shopping_cart' ORDER BY title")->fetchAll();
     
@@ -13,13 +25,13 @@ function andrew_report() {
     
     // Store term names for all terms
     $vocab_names = array();
-    $vocab_names[] = 'Cart Name'; // Add header item for 'Cart Name'
     foreach($terms as $term) {
         $tid = $term->tid;
         $term_data = taxonomy_term_load($tid);
         $vocab_names[] = $term_data->name;
     }
     asort($vocab_names);
+    array_unshift($vocab_names, "Cart Name"); // Add header item for 'Cart Name
     
     // Store names for column headers
     $vocab_names_out = implode(",", $vocab_names);
@@ -28,7 +40,7 @@ function andrew_report() {
     $cart_data_all = array();
     foreach($cart_list as $cart) {
         $nid = $cart->nid;
-        $title = $cart->title;
+        $title = str_replace(",", "", $cart->title);
         $node = node_load($nid);
         $formtype = field_get_items('node', $node, 'field_integration_group');
     
@@ -46,14 +58,20 @@ function andrew_report() {
         $cart_data = array();
         $cart_data['title'] = $title;
         // Loop through each product to generate y/n output for this cart
+        $isfirst = true;
         foreach($vocab_names as $product) {
-            if(in_array($product, $pp_products)) {
-                $val = "Y";
+            if($isfirst) {
+                $isfirst = false;
+                continue;
             }
-            else {
+                
+            if (in_array($product, $pp_products)) {
+                $val = "Y";
+            } else {
                 $val = "N";
             }
             $cart_data[] = $val;
+
         }
         $cart_data_all[] = $cart_data;
     }
@@ -103,9 +121,11 @@ function andrew_report() {
     //echo $output;
     
     // Write data to output CSV file
-    $myfile = fopen("test.csv", "w") or die("Unable to open file!");
+    $myfile = fopen("sites/default/files/products_by_cart.csv", "w") or die("Unable to open file!");
     fwrite($myfile, $vocab_names_out);
     fwrite($myfile, "\n");
     fwrite($myfile, $cdo);
     fclose($myfile);
+    
+    header("Location: sites/default/files/products_by_cart.csv");
 }
